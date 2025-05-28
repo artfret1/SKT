@@ -14,23 +14,18 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up MSBuild (Windows only)
+    - name: Set up MSBuild
       if: runner.os == 'Windows'
       uses: microsoft/setup-msbuild@v2
 
-    - name: Compile C++ project (Windows)
+    - name: Compile C++ project
       if: runner.os == 'Windows'
       run: |
         cl /EHsc gravi/source.cpp /Fe:gravi.exe
 
-    - name: Compile C++ project (Linux/macOS)
-      if: runner.os != 'Windows'
-      run: |
-        g++ -std=c++17 -O2 source.cpp -o source
-
     - name: Run compiled program
       run: |
-        x64/Debug/gravi.exe
+        gravi.exe
 
     - name: Check output file
       run: |
