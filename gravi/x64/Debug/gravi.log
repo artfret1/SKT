@@ -1,0 +1,3 @@
+﻿  source.cpp
+D:\Projects\VScpp\gravi_obr\gravi\gravi\source.cpp(96,20): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
+  gravi.vcxproj -> D:\Projects\VScpp\gravi_obr\gravi\x64\Debug\gravi.exe
