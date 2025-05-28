@@ -30,7 +30,7 @@ jobs:
 
     - name: Run compiled program
       run: |
-        ./x64/Debug/gravi.exe
+        x64/Debug/gravi.exe
 
     - name: Check output file
       run: |
