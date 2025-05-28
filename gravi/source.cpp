@@ -1,0 +1,162 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <fstream>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+struct Cell {
+    double x, z;
+    double rho;
+};
+
+class GravityModel {
+public:
+    GravityModel(double cellVolume) : _G(6.67430), _cellVolume(cellVolume) {}
+
+    void setXProfile(const std::vector<double>& xProfile) {
+        _xProfile = xProfile;
+    }
+
+    void setGProfile(const std::vector<double>& gProfile) {
+        _gProfile = gProfile;
+    }
+
+    void setCells(const std::vector<Cell>& cells) {
+        _cells = cells;
+    }
+
+    std::vector<double> comcomputeGravityProfile(const double& zObs) {
+        std::vector<double> gProfile(_xProfile.size(), 0.0);
+        _gProfile.clear();
+        _gProfile.resize(_xProfile.size(), 0.0);
+        for (const auto& cell : _cells) {
+            for (size_t i = 0; i < _xProfile.size(); i++) {
+                double dx = _xProfile[i] - cell.x;
+                double dz = zObs - cell.z;
+                double r = std::sqrt(dx * dx + dz * dz);
+                if (r > 0) {
+                    double contrib = cell.rho * _cellVolume * dz / (4 * M_PI * r * r * r);
+                    gProfile[i] += contrib;
+                    _gProfile[i] += contrib;
+                }
+            }
+        }
+        return gProfile;
+    }
+
+    std::vector<double> solveInverseProblem(double zObs, double alpha) {
+        size_t nObs = _xProfile.size();
+        size_t nCells = _cells.size();
+
+        std::vector<std::vector<double>> Gmat(nObs, std::vector<double>(nCells, 0.0));
+        for (size_t q = 0; q < nCells; ++q) {
+            for (size_t i = 0; i < nObs; ++i) {
+                double dx = _xProfile[i] - _cells[q].x;
+                double dz = zObs - _cells[q].z;
+                double r = std::sqrt(dx * dx + dz * dz);
+                if (r > 0.0)
+                    Gmat[i][q] = _cellVolume * dz / (4 * M_PI * r * r * r);
+            }
+        }
+
+        std::vector<std::vector<double>> A(nCells, std::vector<double>(nCells, 0.0));
+        std::vector<double> b(nCells, 0.0);
+        for (size_t q = 0; q < nCells; ++q) {
+            for (size_t s = 0; s < nCells; ++s) {
+                for (size_t i = 0; i < nObs; ++i)
+                    A[q][s] += Gmat[i][q] * Gmat[i][s];
+            }
+            A[q][q] += alpha;
+            for (size_t i = 0; i < nObs; ++i)
+                b[q] += Gmat[i][q] * _gProfile[i];
+        }
+
+        std::vector<double> rho(nCells, 0.0);
+
+        for (size_t i = 0; i < nCells; ++i) {
+            double pivot = A[i][i];
+            if (std::abs(pivot) < 1e-20) continue;
+            for (size_t j = i; j < nCells; ++j)
+                A[i][j] /= pivot;
+            b[i] /= pivot;
+
+            for (size_t k = i + 1; k < nCells; ++k) {
+                double factor = A[k][i];
+                for (size_t j = i; j < nCells; ++j)
+                    A[k][j] -= factor * A[i][j];
+                b[k] -= factor * b[i];
+            }
+        }
+
+        for (int i = nCells - 1; i >= 0; --i) {
+            rho[i] = b[i];
+            for (size_t j = i + 1; j < nCells; ++j)
+                rho[i] -= A[i][j] * rho[j];
+        }
+
+        for (size_t k = 0; k < nCells; ++k)
+            _cells[k].rho = rho[k];
+
+        return rho;
+    }
+
+    const std::vector<Cell>& getCells() const { return _cells; }
+
+private:
+    double _G;
+    double _cellVolume;
+    std::vector<Cell> _cells;
+    std::vector<double> _xProfile;
+    std::vector<double> _gProfile;
+};
+
+int main() {
+    const double cellSize = 500.0;
+    const double zObs = 100.0;
+    const double alpha = 0;
+    const int nCellsX = 20;
+    const int nCellsZ = 3;
+    const int nCells = nCellsX * nCellsZ;
+
+    std::vector<Cell> cells;
+    for (int iz = 0; iz < nCellsZ; ++iz) {
+        for (int ix = 0; ix < nCellsX; ++ix) {
+            Cell c;
+            c.x = ix * cellSize + cellSize / 2.0;
+            c.z = iz * cellSize + cellSize / 2.0;
+            c.rho = 0.0;
+            cells.push_back(c);
+        }
+    }
+
+    for (int i = 0; i < nCells; ++i) {
+        int ix = i % nCellsX;
+        int iz = i / nCellsX;
+        if (iz == 1 && ix >= 4 && ix <= 7)
+            cells[i].rho = 1.0;
+    }
+
+    std::vector<double> xProfile;
+    const int nReceivers = 800;
+    for (int i = 0; i < nReceivers; ++i)
+        xProfile.push_back(-2000.0 + i * (8000.0 / (nReceivers - 1)));
+
+    GravityModel model(cellSize * cellSize);
+    model.setCells(cells);
+    model.setXProfile(xProfile);
+
+    std::vector<double> gProfile = model.comcomputeGravityProfile(zObs);
+    model.setGProfile(gProfile);
+
+    std::vector<double> recoveredRho = model.solveInverseProblem(zObs, alpha);
+
+    std::ofstream out("output.csv");
+    out << "x,z,rho_true,rho_recovered\n";
+    for (size_t i = 0; i < cells.size(); ++i)
+        out << cells[i].x << "," << cells[i].z << "," << cells[i].rho << "," << recoveredRho[i] << "\n";
+    out.close();
+    return 0;
+}
