@@ -21,7 +21,7 @@ jobs:
     - name: Compile C++ project (Windows)
       if: runner.os == 'Windows'
       run: |
-        cl /EHsc main.cpp /Fe:gravi.exe
+        cl /EHsc source.cpp /Fe:gravi.exe
 
     - name: Compile C++ project (Linux/macOS)
       if: runner.os != 'Windows'
@@ -30,7 +30,7 @@ jobs:
 
     - name: Run compiled program
       run: |
-        ./main || ./gravi.exe
+        ./gravi || ./gravi.exe
 
     - name: Check output file
       run: |
