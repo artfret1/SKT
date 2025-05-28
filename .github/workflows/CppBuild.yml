@@ -21,16 +21,16 @@ jobs:
     - name: Compile C++ project (Windows)
       if: runner.os == 'Windows'
       run: |
-        cl /EHsc main.cpp /Fe:main.exe
+        cl /EHsc main.cpp /Fe:gravi.exe
 
     - name: Compile C++ project (Linux/macOS)
       if: runner.os != 'Windows'
       run: |
-        g++ -std=c++17 -O2 source.cpp -o main
+        g++ -std=c++17 -O2 source.cpp -o source
 
     - name: Run compiled program
       run: |
-        ./main || ./main.exe
+        ./main || ./gravi.exe
 
     - name: Check output file
       run: |
