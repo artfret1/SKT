@@ -25,7 +25,7 @@ jobs:
 
     - name: Run compiled program
       run: |
-        gravi.exe
+        .\gravi.exe
 
     - name: Check output file
       run: |
