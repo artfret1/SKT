@@ -7,7 +7,6 @@
 
 # Build
 *.obj
-*.exe
 *.pdb
 *.ilk
 *.idb
