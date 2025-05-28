@@ -1,0 +1,37 @@
+name: C++ Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up MSBuild (Windows only)
+      if: runner.os == 'Windows'
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Compile C++ project (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cl /EHsc main.cpp /Fe:main.exe
+
+    - name: Compile C++ project (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        g++ -std=c++17 -O2 main.cpp -o main
+
+    - name: Run compiled program
+      run: |
+        ./main || ./main.exe
+
+    - name: Check output file
+      run: |
+        test -f output.csv && echo "Output generated successfully"
