@@ -21,7 +21,8 @@ jobs:
     - name: Compile C++ project
       if: runner.os == 'Windows'
       run: |
-        cl /EHsc gravi/source.cpp /Fe:gravi.exe
+        dir gravi
+        cl /EHsc source.cpp /Fe:gravi.exe
 
     - name: Run compiled program
       run: |
