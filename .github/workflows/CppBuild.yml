@@ -29,4 +29,8 @@ jobs:
 
     - name: Check output file
       run: |
-        test -f output.csv && echo "Output generated successfully"
+        if (Test-Path "output.csv") {
+          Write-Host "Output generated successfully"
+        } else {
+          Write-Error "Output file not found"
+        }
